@@ -10,7 +10,17 @@
 #include <cstring>
 #include <regex>
 #include <charconv>
-#include <arpa/inet.h>
+
+#if __has_include(<arpa/inet.h>)
+#   include <arpa/inet.h>
+#endif
+
+#if __has_include(<ws2tcpip.h>)
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <ws2tcpip.h>
+#endif
 
 namespace dci::utils::net::ip
 {
@@ -351,19 +361,21 @@ namespace dci::utils::net::ip
         }
 
         std::sub_match<std::string_view::const_iterator> sm = match[1];
-        if(!sm.matched || !fromString(std::string_view{sm.first, static_cast<std::size_t>(sm.second-sm.first)}, addr))
+        std::string_view smStr{sm.first, sm.second};
+        if(!sm.matched || !fromString(smStr, addr))
         {
             return false;
         }
 
         sm = match[2];
+        smStr = std::string_view{sm.first, sm.second};
         if(!sm.matched || sm.first == sm.second)
         {
             port = 0;
             return true;
         }
 
-        return std::errc{} == std::from_chars(sm.first, sm.second, port).ec;
+        return std::errc{} == std::from_chars(smStr.data(), smStr.data()+smStr.size(), port).ec;
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -406,29 +418,32 @@ namespace dci::utils::net::ip
 
         //addr
         std::sub_match<std::string_view::const_iterator> sm = match[1];
-        if(!sm.matched || !fromString(std::string_view{sm.first, static_cast<std::size_t>(sm.second-sm.first)}, addr))
+        std::string_view smStr{sm.first, sm.second};
+        if(!sm.matched || !fromString(smStr, addr))
         {
             return false;
         }
 
         //linkId
         sm = match[2];
+        smStr = std::string_view{sm.first, sm.second};
         if(!sm.matched || sm.first == sm.second)
         {
             linkId = 0;
         }
-        else if(std::errc{} != std::from_chars(sm.first, sm.second, linkId).ec)
+        else if(std::errc{} != std::from_chars(smStr.data(), smStr.data()+smStr.size(), port).ec)
         {
             return false;
         }
 
         //port
         sm = match[3];
+        smStr = std::string_view{sm.first, sm.second};
         if(!sm.matched || sm.first == sm.second)
         {
             port = 0;
         }
-        else if(std::errc{} != std::from_chars(sm.first, sm.second, port).ec)
+        else if(std::errc{} != std::from_chars(smStr.data(), smStr.data()+smStr.size(), port).ec)
         {
             return false;
         }

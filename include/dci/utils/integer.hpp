@@ -67,5 +67,4 @@ namespace dci::utils::integer
     template <std::size_t count> using fastuintCounter  = details::selectByCount<count, std::uint_fast8_t,  std::uint_fast16_t,  std::uint_fast32_t,  std::uint_fast64_t>;
     template <std::size_t count> using leastintCounter  = details::selectByCount<count, std::int_least8_t,  std::int_least16_t,  std::int_least32_t,  std::int_least64_t>;
     template <std::size_t count> using leastuintCounter = details::selectByCount<count, std::uint_least8_t, std::uint_least16_t, std::uint_least32_t, std::uint_least64_t>;
-
 }

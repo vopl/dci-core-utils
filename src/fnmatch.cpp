@@ -94,7 +94,7 @@ namespace dci::utils
                     c = *pattern++;
                 if (c == EOS)
                     return (RANGE_ERROR);
-                if (c == '/' && (flags & fnmPathName))
+                if ((c == '/' || c == '\\') && (flags & fnmPathName))
                     return (RANGE_NOMATCH);
                 if ((flags & fnmCaseFold))
                     c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
@@ -118,6 +118,18 @@ namespace dci::utils
         }
 
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+        const char* findSlash(const char* str)
+        {
+            const char* a = strchr(str, '/');
+            const char* b = strchr(str, '\\');
+            if(!a)
+                return b;
+            if(!b)
+                return a;
+            return a < b ? a : b;
+        }
+
+        /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         int fnmatchx(const char* pattern, const char* string, int flags, size_t recurs)
         {
             const char* stringstart;
@@ -131,17 +143,17 @@ namespace dci::utils
             for (stringstart = string;;)
                 switch (c = *pattern++) {
                 case EOS:
-                    if ((flags & fnmLeadingDir) && *string == '/')
+                    if ((flags & fnmLeadingDir) && (*string == '/' || *string == '\\'))
                         return (0);
                     return (*string == EOS ? 0 : FNM_NOMATCH);
                 case '?':
                     if (*string == EOS)
                         return (FNM_NOMATCH);
-                    if (*string == '/' && (flags & fnmPathName))
+                    if ((*string == '/' || *string == '\\') && (flags & fnmPathName))
                         return (FNM_NOMATCH);
                     if (*string == '.' && (flags & fnmPeriod) &&
                         (string == stringstart ||
-                         ((flags & fnmPathName) && *(string - 1) == '/')))
+                         ((flags & fnmPathName) && (*(string - 1) == '/' || *(string - 1) == '\\'))))
                         return (FNM_NOMATCH);
                     ++string;
                     break;
@@ -157,7 +169,7 @@ namespace dci::utils
                         if (c == EOS)
                             return 0;
                         /* Double-star must be at end or between slashes */
-                        if (c != '/')
+                        if ((c != '/' && c != '\\'))
                             return (FNM_NOMATCH);
 
                         c = *++pattern;
@@ -165,7 +177,7 @@ namespace dci::utils
                             int e = fnmatchx(pattern, string, recurs_flags, recurs);
                             if (e != FNM_NOMATCH)
                                 return e;
-                            string = strchr(string, '/');
+                            string = findSlash(string);
                         } while (string++);
 
                         /* If we get here, we didn't find a match */
@@ -174,19 +186,19 @@ namespace dci::utils
 
                     if (*string == '.' && (flags & fnmPeriod) &&
                         (string == stringstart ||
-                         ((flags & fnmPathName) && *(string - 1) == '/')))
+                         ((flags & fnmPathName) && (*(string - 1) == '/' || *(string - 1) == '\\'))))
                         return (FNM_NOMATCH);
 
                     /* Optimize for pattern with * at end or before /. */
                     if (c == EOS) {
                         if (flags & fnmPathName)
                             return ((flags & fnmLeadingDir) ||
-                                    strchr(string, '/') == nullptr ?
+                                    findSlash(string) == nullptr ?
                                         0 : FNM_NOMATCH);
                         else
                             return (0);
-                    } else if (c == '/' && (flags & fnmPathName)) {
-                        if ((string = strchr(string, '/')) == nullptr)
+                    } else if ((c == '/' || c == '\\') && (flags & fnmPathName)) {
+                        if ((string = findSlash(string)) == nullptr)
                             return (FNM_NOMATCH);
                         break;
                     }
@@ -198,7 +210,7 @@ namespace dci::utils
                         e = fnmatchx(pattern, string, recurs_flags, recurs);
                         if (e != FNM_NOMATCH)
                             return e;
-                        if (test == '/' && (flags & fnmPathName))
+                        if ((test == '/' || test == '\\') && (flags & fnmPathName))
                             break;
                         ++string;
                     }
@@ -206,11 +218,11 @@ namespace dci::utils
                 case '[':
                     if (*string == EOS)
                         return (FNM_NOMATCH);
-                    if (*string == '/' && (flags & fnmPathName))
+                    if ((*string == '/' || *string == '\\') && (flags & fnmPathName))
                         return (FNM_NOMATCH);
                     if (*string == '.' && (flags & fnmPeriod) &&
                         (string == stringstart ||
-                         ((flags & fnmPathName) && *(string - 1) == '/')))
+                         ((flags & fnmPathName) && (*(string - 1) == '/' || *(string - 1) == '\\'))))
                         return (FNM_NOMATCH);
 
                     switch (rangematch(pattern, *string, flags, &newp)) {

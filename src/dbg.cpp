@@ -10,8 +10,33 @@
 #include <cstdlib>
 #include <errno.h>
 
+#ifdef _WIN32
+#   include <Windows.h>
+#endif
+
 namespace dci::utils::dbg
 {
+
+#ifdef _WIN32
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    namespace
+    {
+        const char* program_invocation_short_name = []
+        {
+            std::size_t bufSize = 256;
+            char* buf = reinterpret_cast<char*>(malloc(bufSize));
+            while(bufSize == GetModuleFileNameA(NULL, buf, bufSize))
+            {
+                bufSize += 256;
+                free(buf);
+                buf = reinterpret_cast<char*>(malloc(bufSize));
+            }
+
+            return buf;
+        }();
+    }
+#endif
+
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void API_DCI_UTILS warn(const char* msg, const char* file, unsigned int line, const char* function)
     {
