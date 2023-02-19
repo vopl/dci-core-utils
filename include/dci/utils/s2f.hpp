@@ -31,7 +31,7 @@ namespace dci::utils
             };
         }
 
-        ~S2f()
+        ~S2f() noexcept
         {
             flush();
         }
