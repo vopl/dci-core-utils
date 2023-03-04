@@ -250,31 +250,24 @@ namespace dci::utils::ct
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     namespace details
     {
-        namespace makeSeq
+        template <auto N>
+        constexpr auto makeSeq()
         {
-            template <auto N, decltype(N)... values> struct Segment
-            {
-                template <class=void>
-                using Twice = Segment<N*2, values..., (N+values)...>;
-
-                template <class=void>
-                using TwicePlusOne = Segment<N*2+1, values..., (N+values)..., N*2>;
-
-                template <class=void>
-                using ToList = TList<Value<values>...>;
-            };
-
-            template <auto N>                     struct Gen    : Gen<N/2>::template Twice<> {};
-            template <auto N> requires (N%2 != 0) struct Gen<N> : Gen<N/2>::template TwicePlusOne<> {};
-            template <auto N> requires (N == 0)   struct Gen<N> : Segment<N> {};
-
-            template <auto N>
-            using Impl = typename Gen<N>::template ToList<>;
+            if constexpr(!N)
+                return VList<>{};
+            else
+                return []<decltype(N)... half>(VList<half...>) constexpr
+                {
+                    if constexpr(N&1)
+                        return VList<half..., (N/2+half)..., N-1>{};
+                    else
+                        return VList<half..., (N/2+half)...>{};
+                }(makeSeq<N/2>());
         }
     }
 
     template <auto N>
-    using MakeSeq = typename details::makeSeq::Impl<N>;
+    using MakeSeq = decltype(details::makeSeq<N>());
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     template <auto b, class T, class F>

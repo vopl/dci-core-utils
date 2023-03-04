@@ -73,7 +73,10 @@ namespace dci::utils
         void flush(F&& f);
 
     private:
-        IntrusiveDlistElement<T, Tag> _first;//TODO: оставить один, оформить как цикл
+        // - либо множественные проверки граничных условий в логике
+        // - либо лишние два указателя
+        // выбираю второе
+        IntrusiveDlistElement<T, Tag> _first;
         IntrusiveDlistElement<T, Tag> _last;
     };
 }
