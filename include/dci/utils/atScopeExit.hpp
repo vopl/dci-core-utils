@@ -28,11 +28,11 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         // std::terminate if construction failed
         AtScopeExit(Fn&& fn) noexcept(noexceptMoveCtor) requires(std::constructible_from<Fn, Fn&&>)
-            : m_active{}
+            : _active{}
         {
             tripleCall([&]() noexcept(noexceptMoveCtor) {
-                new(m_fnSpace) Fn{std::move(fn)};
-                m_active = true;
+                new(_fnSpace) Fn{std::move(fn)};
+                _active = true;
             },
             [&]() noexcept {},
             [&]() noexcept {
@@ -43,15 +43,15 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         // std::terminate if construction failed
         AtScopeExit(AtScopeExit&& other) noexcept(noexceptMoveCtor && noexceptDtor) requires(std::constructible_from<Fn, Fn&&>)
-            : m_active{}
+            : _active{}
         {
-            if(!other.m_active)
+            if(!other._active)
                 return;
 
             tripleCall([&]() noexcept(noexceptMoveCtor)
             {
-                new(m_fnSpace) Fn{*other.pfn()};
-                m_active = true;
+                new(_fnSpace) Fn{*other.pfn()};
+                _active = true;
             },
             [&]() noexcept(noexceptDtor)
             {
@@ -72,13 +72,13 @@ namespace dci::utils
 
             release();
 
-            if(!other.m_active)
+            if(!other._active)
                 return *this;
 
             tripleCall([&]() noexcept(noexceptMoveCtor)
             {
-                new(m_fnSpace) Fn{*other.pfn()};
-                m_active = true;
+                new(_fnSpace) Fn{*other.pfn()};
+                _active = true;
             },
             [&]() noexcept(noexceptDtor)
             {
@@ -95,12 +95,12 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         // functor called if construction failed
         AtScopeExit(const Fn& fn) noexcept(noexceptCopyCtor) requires(std::constructible_from<Fn, const Fn&>)
-            : m_active{}
+            : _active{}
         {
             tripleCall([&]() noexcept(noexceptCopyCtor)
             {
-                new(m_fnSpace) Fn{fn};
-                m_active = true;
+                new(_fnSpace) Fn{fn};
+                _active = true;
             },
             [&]() noexcept {},
             [&]() noexcept(noexceptCall)
@@ -112,15 +112,15 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         // functor called if construction failed
         AtScopeExit(const AtScopeExit& other) noexcept(noexceptCopyCtor) requires(std::constructible_from<Fn, const Fn&>)
-            : m_active{}
+            : _active{}
         {
-            if(!other.m_active)
+            if(!other._active)
                 return;
 
             tripleCall([&]() noexcept(noexceptCopyCtor)
             {
-                new(m_fnSpace) Fn{const_cast<const Fn&>(*other.pfn())};
-                m_active = true;
+                new(_fnSpace) Fn{const_cast<const Fn&>(*other.pfn())};
+                _active = true;
             },
             [&]() noexcept {},
             [&]() noexcept(noexceptCall && noexceptDtor)
@@ -137,13 +137,13 @@ namespace dci::utils
 
             release();
 
-            if(!other.m_active)
+            if(!other._active)
                 return *this;
 
             tripleCall([&]() noexcept(noexceptCopyCtor)
             {
-                new(m_fnSpace) Fn{const_cast<const Fn&>(*other.pfn())};
-                m_active = true;
+                new(_fnSpace) Fn{const_cast<const Fn&>(*other.pfn())};
+                _active = true;
             },
             [&]() noexcept {},
             [&]() noexcept(noexceptCall && noexceptDtor)
@@ -157,31 +157,31 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         void release() noexcept(noexceptDtor)
         {
-            if(!m_active)
+            if(!_active)
                 return;
 
-            m_active = false;
+            _active = false;
             pfn()->~Fn();
         }
 
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         void execute() noexcept(noexceptCall && noexceptDtor)
         {
-            if(!m_active)
+            if(!_active)
                 return;
 
             tripleCall([&]() noexcept(noexceptCall)
             {
-                (*pfn())();
+                static_cast<Fn&>(*pfn())();
             },
             [&]() noexcept(noexceptDtor)
             {
-                m_active = false;
+                _active = false;
                 pfn()->~Fn();
             },
             [&]() noexcept(noexceptDtor)
             {
-                m_active = false;
+                _active = false;
                 pfn()->~Fn();
             });
         }
@@ -206,13 +206,13 @@ namespace dci::utils
             {
                 struct FailDoer
                 {
-                    Fail& fail;
-                    bool active{true};
-                    ~FailDoer() noexcept(noexcept(fail())) { if(active) fail(); }
+                    Fail& _fail;
+                    bool _active{true};
+                    ~FailDoer() noexcept(noexcept(_fail())) { if(_active) _fail(); }
                 } failDoer{fail};
 
                 f();
-                failDoer.active = false;
+                failDoer._active = false;
                 success();
             }
         }
@@ -221,11 +221,11 @@ namespace dci::utils
         /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
         Fn* pfn() noexcept
         {
-            return std::launder(reinterpret_cast<Fn*>(m_fnSpace));
+            return std::launder(reinterpret_cast<Fn*>(_fnSpace));
         }
 
     private:
-        alignas(Fn) char m_fnSpace[sizeof(Fn)];
-        bool m_active;
+        alignas(Fn) char _fnSpace[sizeof(Fn)];
+        bool _active;
     };
 }
