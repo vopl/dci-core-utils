@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include "../api.hpp"
+#include "api.hpp"
 #include <cstdint>
 #include <array>
 #include <string_view>
 
-namespace dci::utils::net::ip
+namespace dci::utils::ip
 {
     enum class Scope : std::uint32_t
     {
@@ -56,9 +56,12 @@ namespace dci::utils::net::ip
 
     Scope API_DCI_UTILS scope(const Address4& addr);
     Scope API_DCI_UTILS scope(const Address6& addr);
-    Scope API_DCI_UTILS scope(const std::string_view& addr);
+    Scope API_DCI_UTILS scope(std::string_view addr, Scope dflt = {});
 
     bool API_DCI_UTILS isCover(Scope base, Scope target);
+    bool API_DCI_UTILS isCover(std::string_view base, std::string_view target);
+    bool API_DCI_UTILS isCover(const Address4& baseIp4, std::string_view target);
+    bool API_DCI_UTILS isCover(const Address6& baseIp6, ip::LinkId baseLinkId, std::string_view target);
 
     Address4 API_DCI_UTILS masked(const Address4& addr, const Address4& mask);
     Address4 API_DCI_UTILS masked(const Address4& addr, const Address4& mask, std::uint8_t bits);
@@ -72,6 +75,8 @@ namespace dci::utils::net::ip
     bool API_DCI_UTILS match(const Address6& addr, const Address6& mask);
     bool API_DCI_UTILS match(const Address6& addr, const Address6& mask, std::uint8_t bits);
 
+    std::string API_DCI_UTILS toString(Port port);
+
     std::string API_DCI_UTILS toString(const Address4& addr);
     std::string API_DCI_UTILS toString(const Address4& addr, Port port);
 
@@ -80,6 +85,8 @@ namespace dci::utils::net::ip
     std::string API_DCI_UTILS toString(const Address6& addr, LinkId linkId);
     std::string API_DCI_UTILS toString(const Address6& addr, LinkId linkId, Port port);
 
+    bool API_DCI_UTILS fromString(std::string_view str, Port& port);
+
     bool API_DCI_UTILS fromString(std::string_view str, Address4& addr);
     bool API_DCI_UTILS fromString(std::string_view str, Address4& addr, Port& port);
 
@@ -87,4 +94,28 @@ namespace dci::utils::net::ip
     bool API_DCI_UTILS fromString(std::string_view str, Address6& addr, Port& port);
     bool API_DCI_UTILS fromString(std::string_view str, Address6& addr, LinkId& linkId);
     bool API_DCI_UTILS fromString(std::string_view str, Address6& addr, LinkId& linkId, Port& port);
+}
+
+namespace dci::utils::ip
+{
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    constexpr auto operator&(Scope a, Scope b)
+    {
+        using UT = std::underlying_type_t<Scope>;
+        return static_cast<UT>(a) & static_cast<UT>(b);
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    constexpr auto operator|(Scope a, Scope b)
+    {
+        using UT = std::underlying_type_t<Scope>;
+        return static_cast<UT>(a) | static_cast<UT>(b);
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    constexpr auto operator^(Scope a, Scope b)
+    {
+        using UT = std::underlying_type_t<Scope>;
+        return static_cast<UT>(a) | static_cast<UT>(b);
+    }
 }

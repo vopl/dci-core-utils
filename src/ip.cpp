@@ -5,7 +5,7 @@
    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
    You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <dci/utils/net/ip.hpp>
+#include <dci/utils/ip.hpp>
 #include <dci/utils/dbg.hpp>
 #include <cstring>
 #include <regex>
@@ -22,7 +22,7 @@
 #   include <ws2tcpip.h>
 #endif
 
-namespace dci::utils::net::ip
+namespace dci::utils::ip
 {
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     Scope scope(const Address4& addr)
@@ -68,34 +68,26 @@ namespace dci::utils::net::ip
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
-    Scope scope(const std::string_view& addr)
+    Scope scope(std::string_view addr, Scope dflt)
     {
-        Address4 addr4;
-        Port port;
-
-        if(fromString(addr, addr4, port))
         {
-            return scope(addr4);
+            Address4 addr4;
+            Port port;
+
+            if(fromString(addr, addr4, port))
+                return scope(addr4);
         }
 
-        Address6 addr6;
-        LinkId linkId;
-
-        if(fromString(addr, addr6, linkId, port))
         {
-            return scope(addr6);
+            Address6 addr6;
+            LinkId linkId;
+            Port port;
+
+            if(fromString(addr, addr6, linkId, port))
+                return scope(addr6);
         }
 
-        return {};
-    }
-
-    namespace
-    {
-        template <class T>
-        std::underlying_type_t<T> operator&(T a, T b)
-        {
-            return static_cast<std::underlying_type_t<Scope>>(a) & static_cast<std::underlying_type_t<Scope>>(b);
-        }
+        return dflt;
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -133,6 +125,69 @@ namespace dci::utils::net::ip
         if(base == Scope::wan           ) return (target & Scope::wan);
 
         return false;
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    bool isCover(std::string_view base, std::string_view target)
+    {
+        {
+            Address4 addr;
+            Port port;
+            if(fromString(base, addr, port))
+                return isCover(addr, target);
+        }
+
+        {
+            Address6 addr;
+            LinkId linkId;
+            Port port;
+            if(fromString(base, addr, linkId, port))
+                return isCover(addr, linkId, target);
+        }
+
+        return false;
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    bool isCover(const Address4& baseIp4, std::string_view target)
+    {
+        Scope targetScope = scope(target, Scope::wan);
+        return isCover(scope(baseIp4), targetScope);
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    bool isCover(const Address6& baseIp6, LinkId baseLinkId, std::string_view target)
+    {
+        {
+            Port port;
+            Address6 targetIp6;
+            LinkId targetLinkId;
+            if(fromString(target, targetIp6, targetLinkId, port))
+            {
+                Scope baseScope = scope(baseIp6);
+                Scope targetScope = scope(targetIp6);
+
+                if(Scope::link6 == baseScope && Scope::link6 == targetScope)
+                {
+                    return baseLinkId == targetLinkId;
+                }
+
+                return isCover(baseScope, targetScope);
+            }
+        }
+
+        {
+            Address4 targetIp4;
+            if(fromString(target, targetIp4))
+            {
+                Scope baseScope = scope(baseIp6);
+                Scope targetScope = scope(targetIp4);
+                return isCover(baseScope, targetScope);
+            }
+        }
+
+        //парс не удался, предполагаю что там доменное имя
+        return true;
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -283,6 +338,12 @@ namespace dci::utils::net::ip
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    std::string toString(Port port)
+    {
+        return port ? std::to_string(port) : std::string{};
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     std::string toString(const Address4& addr)
     {
         char buf[INET_ADDRSTRLEN] = {};
@@ -297,7 +358,7 @@ namespace dci::utils::net::ip
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     std::string toString(const Address4& addr, Port port)
     {
-        return toString(addr) + ":" + std::to_string(port);
+        return toString(addr) + (port ? ":" + std::to_string(port) : std::string{});
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -315,7 +376,7 @@ namespace dci::utils::net::ip
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     std::string toString(const Address6& addr, Port port)
     {
-        return "[" + toString(addr) + "]:" + std::to_string(port);
+        return "[" + toString(addr) + "]" + (port ? ":" + std::to_string(port) : std::string{});
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -334,7 +395,19 @@ namespace dci::utils::net::ip
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     std::string toString(const Address6& addr, LinkId linkId, Port port)
     {
-        return "[" + toString(addr, linkId) + "]:" + std::to_string(port);
+        return "[" + toString(addr, linkId) + "]" + (port ? ":" + std::to_string(port) : std::string{});
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    bool fromString(std::string_view str, Port& port)
+    {
+        if(str.empty())
+        {
+            port = 0;
+            return true;
+        }
+
+        return std::errc{} == std::from_chars(str.data(), str.data()+str.size(), port).ec;
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
