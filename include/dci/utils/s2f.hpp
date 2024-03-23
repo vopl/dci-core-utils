@@ -13,27 +13,47 @@
 
 namespace dci::utils
 {
+    namespace s2f
+    {
+        template <class... Args> struct TransitImpl      { using Result = std::tuple<Args...>; };
+        template <class Arg>     struct TransitImpl<Arg> { using Result = Arg; };
+        template <>              struct TransitImpl<>    { using Result = void; };
+
+        template <class... Args>
+        using Transit = TransitImpl<Args...>::Result;
+    }
+
     template <class... Args>
     class S2f
-        : private cmt::Promise<std::tuple<Args...>>
-        , public cmt::Future<std::tuple<Args...>>
+        : private cmt::Promise<s2f::Transit<Args...>>
+        , public cmt::Future<s2f::Transit<Args...>>
         , private sbs::Owner
     {
     public:
-        S2f(sbs::Signal<void, Args...> s)
-            : cmt::Promise<std::tuple<Args...>>{}
-            , cmt::Future<std::tuple<Args...>>{cmt::Promise<std::tuple<Args...>>::future()}
-        {
-            s += this * [this](Args&&...args)
-            {
-                flush();
-                this->resolveValue(std::forward_as_tuple(std::forward<decltype(args)>(args)...));
-            };
-        }
+        S2f(sbs::Signal<void, Args...> s);
+        ~S2f();
+    };
+}
 
-        ~S2f() noexcept
+namespace dci::utils
+{
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    template <class... Args>
+    S2f<Args...>::S2f(sbs::Signal<void, Args...> s)
+        : cmt::Promise<s2f::Transit<Args...>>{}
+        , cmt::Future<s2f::Transit<Args...>>{this->future()}
+    {
+        s += this * [this]<class... ArgsInput>(ArgsInput&&...args) requires requires { {this->resolveValue(std::forward<ArgsInput>(args)...)}; }
         {
             flush();
-        }
-    };
+            this->resolveValue(std::forward<ArgsInput>(args)...);
+        };
+    }
+
+    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+    template <class... Args>
+    S2f<Args...>::~S2f()
+    {
+        flush();
+    }
 }
