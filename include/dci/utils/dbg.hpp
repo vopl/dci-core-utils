@@ -18,18 +18,18 @@
 #   define dbgAssert(condition)                                                 \
      (static_cast<bool>(condition)                                              \
       ? ((void)0)                                                               \
-      : dci::utils::dbg::assertWarn(#condition, __FILE__, __LINE__, __func__))
+      : dci::utils::dbg::assertWarn(#condition, __FILE__, __LINE__, __PRETTY_FUNCTION__))
 
 #   define dbgHeavyAssert(condition) ((void)0)
 
 #   define dbgAssertX(condition, msg)                                                                       \
      (static_cast<bool>(condition)                                                                          \
       ? ((void)0)                                                                                           \
-      : dci::utils::dbg::assertWarn(#msg " on condition: [" #condition "]" , __FILE__, __LINE__, __func__))
+      : dci::utils::dbg::assertWarn(#msg " on condition: [" #condition "]" , __FILE__, __LINE__, __PRETTY_FUNCTION__))
 
-#   define dbgWarn(msg) dci::utils::dbg::warn(msg, __FILE__, __LINE__, __func__)
+#   define dbgWarn(msg) dci::utils::dbg::warn(msg, __FILE__, __LINE__, __PRETTY_FUNCTION__)
 
-#   define dbgFatal(msg) dci::utils::dbg::fatal(msg, __FILE__, __LINE__, __func__)
+#   define dbgFatal(msg) dci::utils::dbg::fatal(msg, __FILE__, __LINE__, __PRETTY_FUNCTION__)
 
 #endif
 
